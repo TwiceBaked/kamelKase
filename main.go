@@ -97,27 +97,14 @@ func (o *object) updateWaterFall() {
 		o.pos.y = 1
 	}
 }
-
 // Dynamically placed objects
-// func newObject(x, y int) *object {
-
-// 	return &object{
-// 		pos: position{x: x, y: y},
-// 	}
-// }
 // END OBJECT
 
 // FINISH
-// type finish struct {
-// 	pos position
-// 	level *level
-// }
-
-// func (f *finish) checkFinish() {
-// 	if p.pos.x == f.pos.x && p.pos.y == f.pos.y {
-
-// 	}
-// }
+type finish struct {
+	pos position
+	level *level
+}
 // END FINISH
 
 // STATS
@@ -194,6 +181,7 @@ type game struct {
 	drawBuf   *bytes.Buffer
 	object	  *object
 	object2	  *object
+	finish    *finish
 }
 
 func newGame(width, height int) *game {
@@ -223,6 +211,10 @@ func newGame(width, height int) *game {
 			level: lvl,
 			pos: position{x: 10, y: 5},
 		},
+		finish: &finish{
+			level: lvl,
+			pos: position{x: 75, y: 10},
+		},
 	}
 }
 
@@ -251,12 +243,20 @@ func (g *game) update() {
 	g.object.updateUpDown()
 	g.level.set(g.object.pos, OBJECT)
 
+	g.level.set(g.finish.pos, FINISH)
+
 	g.level.set(g.player.pos, NOTHING)
 	g.player.update()
 	g.level.set(g.player.pos, PLAYER)
 		
 	if g.object.pos == g.player.pos {
 		fmt.Println("GAME OVER!")
+		
+		g.isRunning = false
+	}
+	if g.finish.pos == g.player.pos {
+		fmt.Println("LEVEL COMPLETE!")
+		g.renderFinalStats()
 		g.isRunning = false
 	}
 }
@@ -273,6 +273,8 @@ func (g *game) renderLevel() {
 				g.drawBuf.WriteString("P")
 			} else if g.level.data[h][w] == OBJECT {
 				g.drawBuf.WriteString("X")
+			} else if g.level.data[h][w] == FINISH {
+				g.drawBuf.WriteString("O")
 			}
 		}
 		g.drawBuf.WriteString("\n")
@@ -293,6 +295,10 @@ func (g *game) renderInfo(){
 	g.drawBuf.WriteString("Use WASD to move your character.\n")
 }
 
+func (g *game) renderFinalStats() {
+	g.drawBuf.WriteString(fmt.Sprintf("You completed this level in: %.2f seconds\n", g.stats.gameTime.Seconds()))
+}
+
 func main() {
 	err := keyboard.Open()
 	if err != nil {
@@ -303,25 +309,32 @@ func main() {
 
 	fmt.Println("Welcome to kamelKase!")
 	fmt.Println("Would you like to start? (y/n): ")
-
-	for {
+	
+	playAgain := true
+	for playAgain{
+		
 		key, _, err := keyboard.GetKey()
 		if err != nil {
 			fmt.Println("Error reading key:", err)
 			return
 		}
-		if key == 'y' || key == 'Y' {
-			break
-		}
+		if key == 'y' || key == 'Y'{
+				
+				width := 80
+				height := 18
+				g := newGame(width, height)
+				g.start()
+				fmt.Println("Would you like to Play Again? (y/n): ")
+			}
+		
 		if key == 'n' || key == 'N' {
+			playAgain = false
 			fmt.Println("Exiting the game. Goodbye!")
 			return
 		}
-		fmt.Println("Invalid input. Please press 'y' to start or 'n' to exit.")
-	}
-
-	width := 80
-	height := 18
-	g := newGame(width, height)
-	g.start()
+		if key != 'n' && key != 'N' && key != 'y' && key != 'Y' {
+			fmt.Println("Invalid input. Please press 'y' to start or 'n' to exit.")
+		}
+		
+	}	
 }
