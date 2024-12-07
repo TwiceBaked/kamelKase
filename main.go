@@ -28,7 +28,6 @@ type input struct {
 }
 
 func (i *input) update() {
-	// Read the key in non-blocking mode
 	key, _, err := keyboard.GetKey()
 	if err != nil {
 		fmt.Println("Error reading key:", err)
@@ -71,7 +70,6 @@ func (p *player) update() {
 type object struct {
 	pos position
 	level *level
-
 	reverse bool
 }
 
@@ -97,7 +95,6 @@ func (o *object) updateWaterFall() {
 		o.pos.y = 1
 	}
 }
-// Dynamically placed objects
 // END OBJECT
 
 // FINISH
@@ -110,8 +107,6 @@ type finish struct {
 // STATS
 type stats struct {
 	start time.Time
-	// frames int 
-	// fps float64
 	gameTime time.Duration
 }
 
@@ -122,18 +117,11 @@ func newStats() *stats {
 }
 
 func (s *stats) update() {
-	// s.frames++
-	// if s.frames == MAX_SAMPLES {
-	// 	s.fps = float64(s.frames) / time.Since(s.start).Seconds()
-	// 	s.frames = 0
-	// 	s.start = time.Now()
-	// }
 	s.gameTime = time.Since(s.start)
 }
 
 func (g *game) renderStats() {
 	g.drawBuf.WriteString("--Stats\n")
-	// g.drawBuf.WriteString(fmt.Sprintf("FPS: %.2f\n", g.stats.fps))
 	g.drawBuf.WriteString(fmt.Sprintf("Time: %.2f\n", g.stats.gameTime.Seconds()))
 }
 // END STATS
@@ -174,6 +162,7 @@ func (l *level) set(pos position, v int) {
 // GAME
 type game struct {
 	isRunning bool
+	gameEnd   int
 	level     *level
 	stats     *stats
 	player    *player
@@ -191,7 +180,6 @@ func newGame(width, height int) *game {
 	var (
 		lvl = newLevel(width, height)
 		inpu = &input{}
-		// object = newObject(width, height)
 	)
 	return &game{
 		level: lvl,
@@ -229,11 +217,9 @@ func (g *game) loop() {
 		g.update()
 		g.render()
 		g.stats.update()
-		// time.Sleep(time.Millisecond * 16) // limit fps
 	}
 }
 
-// add a dt to update param to add phys
 func (g *game) update() {
 	g.level.set(g.object2.pos, NOTHING)
 	g.object2.updateWaterFall()
@@ -250,13 +236,11 @@ func (g *game) update() {
 	g.level.set(g.player.pos, PLAYER)
 		
 	if g.object.pos == g.player.pos {
-		fmt.Println("GAME OVER!")
-		
+		g.gameEnd = 0
 		g.isRunning = false
 	}
 	if g.finish.pos == g.player.pos {
-		fmt.Println("LEVEL COMPLETE!")
-		g.renderFinalStats()
+		g.gameEnd = 1
 		g.isRunning = false
 	}
 }
@@ -296,7 +280,7 @@ func (g *game) renderInfo(){
 }
 
 func (g *game) renderFinalStats() {
-	g.drawBuf.WriteString(fmt.Sprintf("You completed this level in: %.2f seconds\n", g.stats.gameTime.Seconds()))
+	fmt.Printf("You completed this level in: %.2f seconds\n", g.stats.gameTime.Seconds())
 }
 
 func main() {
@@ -309,21 +293,26 @@ func main() {
 
 	fmt.Println("Welcome to kamelKase!")
 	fmt.Println("Would you like to start? (y/n): ")
-	
 	playAgain := true
 	for playAgain{
-		
+
 		key, _, err := keyboard.GetKey()
 		if err != nil {
 			fmt.Println("Error reading key:", err)
 			return
 		}
+
 		if key == 'y' || key == 'Y'{
-				
 				width := 80
 				height := 18
 				g := newGame(width, height)
 				g.start()
+				if g.gameEnd == 0 {
+					fmt.Println("You colided with an 'X'! GAME OVER!")
+				} else if g.gameEnd == 1{
+					fmt.Println("You reached the Finish! LEVEL COMPLETE!")
+					g.renderFinalStats()
+				}
 				fmt.Println("Would you like to Play Again? (y/n): ")
 			}
 		
@@ -331,10 +320,8 @@ func main() {
 			playAgain = false
 			fmt.Println("Exiting the game. Goodbye!")
 			return
-		}
-		if key != 'n' && key != 'N' && key != 'y' && key != 'Y' {
+		} else if key != 'n' && key != 'N' && key != 'y' && key != 'Y' {
 			fmt.Println("Invalid input. Please press 'y' to start or 'n' to exit.")
 		}
-		
 	}	
 }
